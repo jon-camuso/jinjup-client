@@ -25,10 +25,10 @@ Copyright (c) 2013-2014 Jon Camuso <jcamuso@exechos.com>
 	}
 })();
 
-var jinjup = (function ($) {
+var jinjup = (function () {
 	
 	var xmlHttpReq =  window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
-	var privateSelf = this;
+	var self = null;
 	this.site = null;
 	
 		urlDecode = function (encoded)
@@ -119,13 +119,13 @@ var jinjup = (function ($) {
 	
 		initialize: function(site)
 		{
-			privateSelf = this;
+			self = this;
 			
-			this.site = site;
+			self.site = site;
 			
-			this.initializeNavigation();
+			self.initializeNavigation();
 			
-			this.site.initialize();
+			self.site.initialize();
 		},
 		mergeSelect: function(target, responseView)
 		{
@@ -190,16 +190,17 @@ var jinjup = (function ($) {
 					if(!isStringContent)
 					{
 						var node = this.createNodeFromContent(content);
-						domElement.innerHTML = "";
-						domElement.appendChild(node);
+						if(tartgetId === responseView.id)
+						{
+							domElement.parentNode.replaceChild(node, domElement);
+						}
+						else
+						{
+							domElement.innerHTML = "";
+							domElement.appendChild(node);
+						}
 					}
 /*
-					if(responseView.Target == responseView.Id)
-					{
-						var container = document.createElement("div");
-						container.innerHTML = content;
-		        			domElement.parentNode.replaceChild(container.firstChild, domElement);
-					}
 					else
 					{
 						if(domElement.tagName == "INPUT")
@@ -208,7 +209,7 @@ var jinjup = (function ($) {
 						}
 						else if(domElement.tagName == "SELECT")
 						{
-							privateSelf.mergeSelect(domElement, responseView);
+							self.mergeSelect(domElement, responseView);
 						}
 						else
 						{
@@ -253,7 +254,7 @@ var jinjup = (function ($) {
 			
 				for(var index = 0; index < count; index++)
 				{
-					privateSelf.mergeResponseView(childViews[index]);
+					self.mergeResponseView(childViews[index]);
 				}
 			}
 			
@@ -272,7 +273,7 @@ var jinjup = (function ($) {
 				}
 				else
 				{
-					privateSelf.mergeResponseView(response);
+					self.mergeResponseView(response);
 				}
 			}
 			catch(exception)
@@ -287,7 +288,7 @@ var jinjup = (function ($) {
 
 			if(!callbackFunction)
 			{
-				callbackFunction = privateSelf.defaultProcessResponse;
+				callbackFunction = self.defaultProcessResponse;
 			}
 
 			
@@ -318,31 +319,47 @@ var jinjup = (function ($) {
 			}
 			xmlHttpReq.send(action);
 		},
+
+		hasClass: function(element, className)
+		{
+			
+		},
+
+		asynchNavigate: function(event)
+		{
+			if(this.href)
+			{
+				var href = this.href;
+				self.site.getView(href);
+		
+				if(history.pushState)
+				{
+					history.pushState('', 'New URL: ' + href, href);
+				}
+			}
+			event.preventDefault();			
+		},
 		
 		initializeNavigation: function()
 		{
-			var self = this;
-			$('.nav-a').live("click", function (e)
-			{
-				if(this.href)
-				{
-					var href = this.href;
-					self.site.getView(href);
-			
-					if(history.pushState)
+			document.addEventListener("click",  function(event){
+					var element = event.target;
+					var found = false;
+					while(element 
+					&& 	!(found = (element.tagName == 'A' && element.classList.contains("nav-a"))))
 					{
-						history.pushState('', 'New URL: ' + href, href);
+						element = element.parentElement;
 					}
-				}
-				e.preventDefault();
-			}
-			);
-		
+					if(found)
+					{
+						self.asynchNavigate.call(element, event);
+					}
+			});
 			window.onpopstate = function (e)
 			{
-				if(!privateSelf.loaded)
+				if(!self.loaded)
 				{
-					privateSelf.loaded = true;
+					self.loaded = true;
 				}
 				else if(history.state != null)
 				{
@@ -565,7 +582,7 @@ var jinjup = (function ($) {
 	};
 	
 	
-}(jQuery));
+}());
 
 var site = (function ($, x)
 {
