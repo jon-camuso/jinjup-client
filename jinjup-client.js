@@ -2,28 +2,9 @@
 jinjup-client v0.0.3 
 jinjup.com 
 Copyright (c) 2013-2014 Jon Camuso <jcamuso@exechos.com>
+Lisence MIT
 */
 
-(function() {
-
-	if(typeof(Event) != "undefined")
-	{
-	if (!Event.prototype.preventDefault) 
-	{
-		Event.prototype.preventDefault=function() 
-		{
-			this.returnValue=false;
-		};
-	}
-	if (!Event.prototype.stopPropagation) 
-	{
-		Event.prototype.stopPropagation=function() 
-		{
-			this.cancelBubble=true;
-		};
-	}
-	}
-})();
 
 var jinjup = (function () {
 	
@@ -119,12 +100,27 @@ var jinjup = (function () {
 	
 		initialize: function(site)
 		{
-			self = this;
-			
-			self.site = site;
-			
-			self.initializeNavigation();
-			
+			if(typeof(Event) != "undefined")
+			{
+				if (!Event.prototype.preventDefault) 
+				{
+					Event.prototype.preventDefault=function() 
+					{
+						this.returnValue=false;
+					};
+				}
+				if (!Event.prototype.stopPropagation) 
+				{
+					Event.prototype.stopPropagation=function() 
+					{
+						this.cancelBubble=true;
+					};
+				}
+			}
+
+			self = this;			
+			self.site = site;			
+			self.initializeNavigation();			
 			self.site.initialize();
 		},
 		mergeSelect: function(target, responseView)
@@ -153,9 +149,7 @@ var jinjup = (function () {
 				node = document.createElement(content.tagName);
 				for(name in content.attributes)
 				{
-					var attribute = document.createAttribute(name);
-					attribute.nodeValue = content.attributes[name];
-					node.setAttributeNode(attribute);
+					node.setAttribute(name, content.attributes[name]);
 				}
 				var length = content.childNodes.length;
 				for(var index = 0; index < length; ++index)
@@ -171,8 +165,8 @@ var jinjup = (function () {
 		{
 			var domElement;
 			var isStringContent = false;
-			var tartgetId = responseView.targetId;
-			if(tartgetId)
+			var targetId = responseView.targetId;
+			if(targetId)
 			{
 				var content = responseView.content;
 
@@ -181,16 +175,24 @@ var jinjup = (function () {
 					isStringContent = true;
 					content = urlDecode(content);
 				}
-				if(tartgetId === "alert" && isStringContent)
+				if(targetId === "alert" && isStringContent)
 				{
 					alert(content);
 				}
-				else if((domElement = document.getElementById(tartgetId)) != null)
+				if(responseView.targetType === "console" && isStringContent)
+				{
+					if(console.hasOwnProperty(targetId)
+					&& typeof(console[targetId]) === 'function' )
+					{
+						console[targetId](content);
+					}
+				}
+				else if((domElement = document.getElementById(targetId)) != null)
 				{
 					if(!isStringContent)
 					{
 						var node = this.createNodeFromContent(content);
-						if(tartgetId === responseView.id)
+						if(targetId === responseView.id)
 						{
 							domElement.parentNode.replaceChild(node, domElement);
 						}
@@ -220,9 +222,10 @@ var jinjup = (function () {
 				}
 				else 
 				{
-					console.log('Dom Target: '+ responseView.Target + ' not found.');
+					console.error('Dom Target: '+ targetId + ' not found.');
 				}
 			}
+/*
 			if(responseView.hasOwnProperty('console'))
 			{
 				if(responseview.console.hasOwnProperty('log'))
@@ -246,7 +249,8 @@ var jinjup = (function () {
 						console.error(urlDecode(warning));
 					}
 				}
-			}		
+			}
+*/		
 			if(responseView.childViews)
 			{
 				var childViews = responseView.childViews;
@@ -586,7 +590,7 @@ var jinjup = (function () {
 
 var site = (function ($, x)
 {
-
+	var self = null;
 	var home = window.location.protocol + "//" + window.location.hostname + "/";
 
 	return {
@@ -595,7 +599,11 @@ var site = (function ($, x)
 		//
 		initialize: function ()
 		{
-			
+			self = this;
+			$(window).resize(function (e) { self.setAllViewPortClasses(); });
+			document.addEventListener("touchmove", self.setAllViewPortClasses, false);
+			document.addEventListener("scroll", self.setAllViewPortClasses, false);
+
 		},
 
 
@@ -644,7 +652,61 @@ var site = (function ($, x)
 
 			x.postRequest(null, href, body, callBack);
 		},
+
+		setViewPortClass: function(element, verticalScrollPosition, inViewClass, outViewClass)
+		{
+			var top = element.offset().top;
+			var offset = Math.min($(element)[0].offsetHeight, 100);
+
+
+			if (parseInt(verticalScrollPosition) > (top + (offset/2)))
+			{
+				if(element[0].className.indexOf(outViewClass) === -1)
+				{
+					element.removeClass(inViewClass).addClass(outViewClass);
+				}
+			} 
+			else
+			{
+				if(element[0].className.indexOf(inViewClass) === -1)
+				{
+					element.addClass(inViewClass).removeClass(outViewClass);
+				}
+			}
+		},
+
+		setAllViewPortClasses: function()
+		{
+			//var watchElements = $(".scroll-watch");
+			var scrollTop = parseInt($(window).scrollTop())
+			var scrollBottom = (scrollTop  +  parseInt($(window).height()));
+/*
+			for (var i = 0; i < watchElements.length; i++)
+			{
+				self.setViewPortClass(watchElements[i], scrollBottom);
+			}
+*/
+
+			//self.setHeaderViewPortClass(scrollTop);
+		},
 		
+		setHeaderViewPortClass: function(scrollTop)
+		{
+			var header = $(".main-header");
+
+			if(scrollTop > 85
+			&& header[0].className.indexOf("header-floating"))
+			{
+				header.addClass("header-fixed").removeClass("header-floating");
+			}
+			else if(scrollTop < 86
+				 && header[0].className.indexOf("header-fixed"))
+			{
+				header.removeClass("header-fixed").addClass("header-floating");
+			}
+		}
+		
+
 	};
 
 } (jQuery, jinjup));
@@ -655,3 +717,4 @@ $(function ()
 	jinjup.initialize(site);	
 
 });
+
