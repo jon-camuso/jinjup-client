@@ -2,7 +2,7 @@
 jinjup-client v0.0.3 
 jinjup.com 
 Copyright (c) 2013-2014 Jon Camuso <jcamuso@exechos.com>
-Lisence MIT
+License MIT
 */
 
 
@@ -225,32 +225,6 @@ var jinjup = (function () {
 					console.error('Dom Target: '+ targetId + ' not found.');
 				}
 			}
-/*
-			if(responseView.hasOwnProperty('console'))
-			{
-				if(responseview.console.hasOwnProperty('log'))
-				{
-					for(log in responseview.console.logs)
-					{
-						console.log(urlDecode(log));
-					}
-				}
-				if(responseview.console.hasOwnProperty('errors'))
-				{
-					for(error in responseview.console.errors)
-					{
-						console.error(urlDecode(error));
-					}
-				}
-				if(responseview.console.hasOwnProperty('warnings'))
-				{
-					for(warning in responseview.console.warnings)
-					{
-						console.error(urlDecode(warning));
-					}
-				}
-			}
-*/		
 			if(responseView.childViews)
 			{
 				var childViews = responseView.childViews;
