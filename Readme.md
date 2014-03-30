@@ -1,24 +1,33 @@
-jinjup Client
+## The Client Side of jinjup
 
-JavaScript module that sends asynchronous requests and proceses jinjup formatted response objects.
+A JavaScript module that sends asynchronous requests and proceses jinjup formatted response objects.
+
+## Format
+
+Adorn anchor elements with data-asynch and data-verb attributes and jinjup client will wire them 
+for asynchornous calls to your http server.
 
 ```html
-	<!--
-		adorn anchor elements with data-asynch and data-verb attributes and jinjup client will wire them 
-		for asynchornous calls to your http server.
-	-->
 	 
 	<a href="/about" data-asynch='1' data-verb='GET'>about</a>
 
 ```
 
-## Initialization
+## Include
 
-Optionally use default behavior
+```html
+	 
+<script src="/path/jinjup-client.js" type="text/javascript">
+
+```
+
+## Initialize
+
+Use default behavior
 
 	jinjup.initialize();
 
-...override with your own code
+Override with your own code
 
 ```js
 
@@ -34,7 +43,7 @@ Optionally use default behavior
 
 ```
 
-...perform custom preprocessing and post processing
+Perform custom preprocessing and post processing
 
 	jinjup.initialize(specialPreProcessingRoutes, specialPostProcessingRoutes);
 
@@ -43,8 +52,8 @@ Optionally use default behavior
 
 On the client side you're covered.  jinjup Client manages history pushstate and popstate for you.
 You are responsible for producing the appropriate response on the server.  If you are using 
-node.js with jinjup html controls producing output for synchronous and asynchronous requests for
-the same view is a breeze.
+[node.js](http://nodejs.org) with [jinjup HTML Controls](https://github.com/jon-camuso/jinjup-html-controls) then producing output for synchronous and 
+asynchronous requests for the same view is a breeze.
  
 Check out [jinjup HTML Controls](https://github.com/jon-camuso/jinjup-html-controls) and 
 the [jinjup Resonse Object](https://github.com/jon-camuso/jinjup-response) to learn more 
