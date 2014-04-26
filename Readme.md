@@ -4,12 +4,12 @@ A JavaScript module that sends asynchronous requests and proceses jinjup formatt
 
 ## Format
 
-Adorn anchor elements with a data-asynch attribute and a value indicating the HTTP method(verb) and 
+Adorn anchor elements with a data-async attribute and a value indicating the HTTP method(verb) and 
 jinjup client will wire them for asynchornous calls to your http server.
 
 ```html
 	 
-	<a href="/about" data-asynch='GET'>about</a>
+	<a href="/about" data-async='GET'>about</a>
 
 ```
 
