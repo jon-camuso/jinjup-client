@@ -1,64 +1,64 @@
 /*
-jinjup-client v0.0.4
+jinjup-client v0.0.3 
 jinjup.com 
 Copyright (c) 2013-2014 Jon Camuso <jcamuso@exechos.com>
 Lisence MIT
 */
 
-var jinjup = (function ()
-{
 
-	var xmlHttpReq = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+var jinjup = (function () {
+	
+	var xmlHttpReq =  window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
 	var self = null;
 	var requestRoutes = {};
 	var responseRoutes = {};
-
-	urlDecode = function (encoded)
-	{
-		return decodeURIComponent((encoded + '').replace(/\+/g, '%20'));
-	};
-
-	urlEncode = function (plaintext)
-	{
-		return encodeURIComponent(plainText);
-	};
-
-
-	return {
-
-		initialize: function (reqRoutes, resRoutes)
+	
+		urlDecode = function (encoded)
 		{
-			self = this;
+			return decodeURIComponent((encoded+'').replace(/\+/g, '%20'));
+		};
+		
+		urlEncode = function (plaintext)
+		{
+			return encodeURIComponent(plainText);
+		};
+
+		
+	return {
+	
+		initialize: function(reqRoutes, resRoutes)
+		{
+			self = this;			
 			self.requestRoutes = reqRoutes ? reqRoutes : {};
 			self.responseRoutes = resRoutes ? resRoutes : {};
-
-			if (typeof (Event) != "undefined")
+			
+			if(typeof(Event) != "undefined")
 			{
-				if (!Event.prototype.preventDefault)
+				if (!Event.prototype.preventDefault) 
 				{
-					Event.prototype.preventDefault = function ()
+					Event.prototype.preventDefault=function() 
 					{
-						this.returnValue = false;
+						this.returnValue=false;
 					};
 				}
-				if (!Event.prototype.stopPropagation)
+				if (!Event.prototype.stopPropagation) 
 				{
-					Event.prototype.stopPropagation = function ()
+					Event.prototype.stopPropagation=function() 
 					{
-						this.cancelBubble = true;
+						this.cancelBubble=true;
 					};
 				}
 			}
 
-			self.initializeNavigation();
+			self.initializeNavigation();			
 		},
 
-		mergeSelect: function (target, response)
+		mergeSelect: function(target, response)
 		{
 			var options = target.options;
-			for (var index = 0; index < options.length; ++index)
+			for(var index = 0; index < options.length; ++index)
 			{
-				if ((options[index].value && options[index].value == response.Content)
+				if((options[index].value && options[index].value == response.Content)
 				|| (options[index].text == response.Content))
 				{
 					target.selectedIndex = index;
@@ -67,64 +67,65 @@ var jinjup = (function ()
 			}
 		},
 
-		createNodeFromContent: function (content)
+		createNodeFromContent: function(content)
 		{
-			var node = null;
-			if (content.nodeType === "text")
+			var node = null;	
+			if(content.nodeType === "text")
 			{
 				node = document.createTextNode(content.nodeValue);
 			}
-			else if (content.nodeType === "element")
+			else if(content.nodeType === "element")
 			{
 				node = document.createElement(content.tagName);
-				for (name in content.attributes)
+				for(name in content.attributes)
 				{
 					node.setAttribute(name, content.attributes[name]);
 				}
 				var length = content.childNodes.length;
-				for (var index = 0; index < length; ++index)
+				for(var index = 0; index < length; ++index)
 				{
 					var child = this.createNodeFromContent(content.childNodes[index]);
 					node.appendChild(child);
 				}
 			}
-			return node;
+			return node; 
 		},
 
-		mergeResponse: function (response)
+		mergeResponse: function(response)
 		{
 			var domElement;
 			var isStringContent = false;
 			var targetId = response.targetId;
-			if (targetId)
+			if(targetId)
 			{
 				var content = response.content;
 
-				if (typeof content === "string")
+				if(typeof content === "string")
 				{
 					isStringContent = true;
 					content = urlDecode(content);
 				}
-				if (targetId === 'alert' && isStringContent)
+				if(targetId === 'alert' && isStringContent)
 				{
 					alert(content);
 				}
-				if (response.targetType === 'console' && isStringContent)
+				if(response.targetType === 'console' && isStringContent)
 				{
-					if (console.hasOwnProperty(targetId)
-					&& typeof (console[targetId]) === 'function')
+					if((console.hasOwnProperty(targetId)
+					|| targetId in console)
+					&& typeof(console[targetId]) === 'function' )
 					{
 						console[targetId](content);
 					}
 				}
-				else if ((domElement = document.getElementById(targetId)) != null)
+				else if((domElement = document.getElementById(targetId)) != null)
 				{
-					if (response.targetType == 'element')
+					if(response.targetType == 'element')
 					{
-						if (!isStringContent)
+						if(!isStringContent)
 						{
 							var node = this.createNodeFromContent(content);
-							if (targetId === response.id)
+							if(targetId === response.id)
 							{
 								domElement.parentNode.replaceChild(node, domElement);
 							}
@@ -136,15 +137,15 @@ var jinjup = (function ()
 						}
 						else
 						{
-							if (domElement.tagName == "INPUT")
+							if(domElement.tagName == "INPUT")
 							{
 								domElement.value = content;
 							}
-							else if (domElement.tagName == "SELECT")
+							else if(domElement.tagName == "SELECT")
 							{
 								self.mergeSelect(domElement, response);
 							}
-							else if (targetId === response.id)
+							else if(targetId === response.id)
 							{
 								var container = document.createElement('div');
 								container.innerHTML = content;
@@ -157,33 +158,33 @@ var jinjup = (function ()
 						}
 					}
 				}
-				else
+				else 
 				{
-					console.error('Dom Target: ' + targetId + ' not found.');
+					console.error('Dom Target: '+ targetId + ' not found.');
 				}
 			}
 
-			if (response.childViews)
+			if(response.childViews)
 			{
 				var childViews = response.childViews;
 				var count = response.childViews.length;
-
-				for (var index = 0; index < count; index++)
+			
+				for(var index = 0; index < count; index++)
 				{
 					self.mergeResponse(childViews[index]);
 				}
 			}
-
+			
 		},
-
+		
 		defaultProcessResponse: function ()
 		{
 			try
 			{
 				var response;
 				var responseText = xmlHttpReq.responseText;
-
-				if ((response = JSON.parse(responseText)) == null)
+				
+				if((response = JSON.parse(responseText)) == null)
 				{
 					console.error('JSON failed to parse [' + responseText + ']');
 				}
@@ -192,26 +193,32 @@ var jinjup = (function ()
 					self.mergeResponse(response);
 				}
 			}
-			catch (exception)
+			catch(exception)
 			{
-				console.error(' defaultProcessResponse ' + exception);
+				console.error( ' defaultProcessResponse ' + exception);
 			}
 		},
-
-		sendRequest: function (verb, url, body)
+		
+		sendRequest: function(method, url, body)
 		{
 			var request = document.createElement('a');
 			request.href = url;
-			var asynchUrl = '/asynch'
-						  + request.pathname
+			var requestPath = request.pathname;
+			if(requestPath[0] !== '/')
+			{
+				requestPath = '/' + requestPath;
+			}
+
+			var asyncUrl = '/async'
+						  + requestPath
 						  + request.search;
 
 			var callbackFunction = null;
-			if (self.responseRoutes[url])
+			if(self.responseRoutes[url])
 			{
 				callbackFunction = self.responseRoutes[url];
 			}
-			else if (self.responseRoutes[request.pathname])
+			else if(self.requestRoutes[request.pathname])
 			{
 				callbackFunction = self.responseRoutes[request.pathname];
 			}
@@ -219,10 +226,10 @@ var jinjup = (function ()
 			{
 				callbackFunction = self.defaultProcessResponse;
 			}
-
-			xmlHttpReq.open(verb, asynchUrl, true);
+			
+			xmlHttpReq.open(method, asyncUrl, true);
 			xmlHttpReq.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
+		
 			xmlHttpReq.onreadystatechange = function ()
 			{
 				switch (xmlHttpReq.readyState)
@@ -240,7 +247,7 @@ var jinjup = (function ()
 						}
 						else
 						{
-							console.log('Error: server returned status ' + xmlHttpReq.status);
+							console.log('Error: server returned status '+ xmlHttpReq.status );
 						}
 						break;
 				}
@@ -248,134 +255,132 @@ var jinjup = (function ()
 			xmlHttpReq.send(body);
 		},
 
-		routeRequest: function (request)
+		routeRequest: function(request)
 		{
-
-			if (request.href && self.requestRoutes[request.href])
+			
+			if(request.href && self.requestRoutes[request.href])
 			{
 				self.requestRoutes[request.href]();
 			}
-			else if (self.requestRoutes[request.pathname])
+			else if(self.requestRoutes[request.pathname])
 			{
 				self.requestRoutes[request.pathname]();
 			}
 			else
 			{
-				self.sendRequest(request.getAttribute('data-verb'), request.href);
-			}
+				self.sendRequest(request.getAttribute('data-async'), request.href);
+			}									
 		},
 
-		asynchNavigate: function (event)
+		asyncNavigate: function(event)
 		{
-			if (this.href)
+			if(this.href)
 			{
 				var href = this.href;
 				self.routeRequest(this);
-
-				if (history.pushState)
+		
+				if(history.pushState)
 				{
 					history.pushState('', 'New URL: ' + href, href);
 				}
 			}
-			event.preventDefault();
+			event.preventDefault();			
 		},
-
-		initializeNavigation: function ()
+		
+		initializeNavigation: function()
 		{
-			document.addEventListener('click', function (event)
-			{
-				var element = event.target;
-				var found = false;
-				while (element
-					&& !(found = (element.tagName == 'A'
-					&& element.getAttribute('data-asynch'))))
-				{
-					element = element.parentElement;
-				}
-				if (found)
-				{
-					self.asynchNavigate.call(element, event);
-				}
+			document.addEventListener('click',  function(event){
+					var element = event.target;
+					var found = false;
+					while(element 
+					&& 	!(found = (element.tagName == 'A' 
+					&& element.getAttribute('data-async'))))
+					{
+						element = element.parentElement;
+					}
+					if(found)
+					{
+						self.asyncNavigate.call(element, event);
+					}
 			});
 			window.onpopstate = function (e)
 			{
-				if (!self.loaded)
+				if(!self.loaded)
 				{
 					self.loaded = true;
 				}
-				else if (history.state != null)
+				else if(history.state != null)
 				{
-					// was site.getView(location.href);
-					// needs replacement 
+					site.getView(location.href);
 				}
 			};
 		},
-
+		
 		serializeAllUserElements: function ()
 		{
 			var serializedInputs = this.serializeInputsWithIds();
-			if (serializedInputs != "")
+			if(serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			serializedInputs += this.serializeAllSelectElements();
-			if (serializedInputs != "")
+			if(serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			serializedInputs += this.serializeTextAreasWithIds();
-			if (serializedInputs != "")
+			if(serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			return serializedInputs;
 		},
-
+		
 		serializeTextAreasWithIds: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
 			var parentElement = (parentElement || document.body);
 			var textAreas = parentElement.getElementsByTagName('textarea');
-			for (index = 0; index < textAreas.length; index++)
+			for(index = 0; index < textAreas.length; index++)
 			{
-				if (textAreas[index].id != null && textAreas[index].id != "")
+				if(textAreas[index].id != null && textAreas[index].id != "")
 				{
 					serializedInputs += textAreas[index].id;
 					serializedInputs += "=";
-					serializedInputs += urlEncode(textAreas[index].value);
+					serializedInputs += urlEncode (textAreas[index].value);
 				}
 			}
 			return serializedInputs;
 		},
-
+		
 		serializeInputsWithIds: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
 			var inputs = this.getInputChildElements(parentElement);
-			for (index = 0; index < inputs.length; index++)
+			for(index = 0; index < inputs.length; index++)
 			{
-				if (inputs[index].id != null && inputs[index].id != "")
+				if(inputs[index].id != null && inputs[index].id != "")
 				{
-					if ((inputs[index].type == "radio"
+					if((inputs[index].type == "radio"
 						|| inputs[index].type == "checkbox")
 						&& !inputs[index].checked)
 					{
 						continue;
 					}
-					if (serializedInputs != "")
+					if(serializedInputs != "")
 					{
 						serializedInputs += "&";
 					}
 					serializedInputs += inputs[index].id;
 					serializedInputs += "=";
-					serializedInputs += urlEncode(inputs[index].value);
+					serializedInputs += urlEncode (inputs[index].value);
 				}
 			}
 			return serializedInputs;
 		},
-
+		
 		getInputChildElements: function (specifiedElement)
 		{
 			var parentElement = (specifiedElement || document.body);
@@ -383,21 +388,21 @@ var jinjup = (function ()
 			{
 				return parentElement.getElementsByTagName("input");
 			}
-			catch (exception)
+			catch(exception)
 			{
 				console.log("getInputChildElements failed with error " + exception);
 			}
 			return [];
 		},
-
+		
 		serializeAllSelectElements: function ()
 		{
 			var serializedSelects = "";
 			var selects = document.getElementsByTagName("select");
 			var index = 0;
-			for (index = 0; index < selects.length; index++)
+			for(index = 0; index < selects.length; index++)
 			{
-				if (index > 0)
+				if(index > 0)
 				{
 					serializedSelects += "&";
 				}
@@ -405,11 +410,11 @@ var jinjup = (function ()
 			}
 			return serializedSelects;
 		},
-
+		
 		serializeSelectedOptionWithId: function (specifiedElement)
 		{
 			var serializedSelect = specifiedElement.id + "=";
-			if (specifiedElement.options[specifiedElement.selectedIndex].value != "")
+			if(specifiedElement.options[specifiedElement.selectedIndex].value != "")
 			{
 				serializedSelect += urlEncode(specifiedElement.options[specifiedElement.selectedIndex].value);
 			}
@@ -419,37 +424,37 @@ var jinjup = (function ()
 			}
 			return serializedSelect;
 		},
-
+		
 		serializeAllSelectOptionsWithId: function (specifiedElement)
 		{
 			var index = 0;
 			var serializedSelect = specifiedElement.id + "=";
 			var options = specifiedElement.options;
-			for (index = 0; index < options.length; index++)
+			for(index = 0; index < options.length; index++)
 			{
-				if (index > 0)
+				if(index > 0)
 				{
 					serializedSelect += ",";
 				}
-				serializedSelect += urlEncode(options[index].value);
+				serializedSelect += urlEncode (options[index].value);
 			}
 			return serializedSelect;
 		},
-
-		validateInputs: function (inputs)
+		
+		validateInputs: function(inputs)
 		{
 			var areValid = true;
-			for (var index = 0; areValid && index < inputs.length; index++)
+			for(var index = 0; areValid && index < inputs.length; index++)
 			{
 				areValid = this.validateInput(inputs[index]);
 			}
-			return areValid;
+			return areValid ;
 		},
-
-		validateInput: function (input)
+		
+		validateInput: function(input)
 		{
 			var isValid = true;
-			if (input.value == "")
+			if(input.value == "")
 			{
 				isValid = false;
 				input.focus();
@@ -457,12 +462,11 @@ var jinjup = (function ()
 			}
 			return isValid;
 		},
-
+				
 		getProperty: function (propertyName, element)
 		{
 			// Note that in some versions of IE9 it is critical that
 			// msTransform appear in this list before MozTransform
-			//
 			var suffixed = propertyName.charAt(0).toUpperCase() + propertyName.slice(1);
 			var properties = [
 		        propertyName,
@@ -472,60 +476,189 @@ var jinjup = (function ()
 		        "O" + suffixed
 		    ];
 			var p;
-			while (p = properties.shift())
+			while(p = properties.shift())
 			{
-				if (typeof element.style[p] != 'undefined')
+				if(typeof element.style[p] != 'undefined')
 				{
 					return p;
 				}
 			}
 			return false;
 		},
-
+						
 		setOpacity: function (element, opacity)
 		{
 			var property = null;
-			if (opacity < 0)
+			if(opacity < 0)
 			{
 				opacity = 0;
 			}
-			if ((property = element.style.filter))
+			if((property = element.style.filter))
 			{
 				property = "alpha(opacity=" + opacity + ")";
 			}
-			else if ((property = this.getProperty("opacity", element)))
+			else if((property = this.getProperty("opacity", element)))
 			{
 				element.style[property] = opacity;
 			}
 		},
-
+		
 		getOpacity: function (element)
 		{
 			var property = null;
 			var opacity = 0;
-			if ((property = element.style.filter))
+			if((property = element.style.filter))
 			{
 				opacity = parseFloat(property.replace("alpha(opacity=", ""));
 			}
-			else if ((property = this.getProperty("opacity", element)))
+			else if((property = this.getProperty("opacity", element)))
 			{
 				opacity = element.style[property] == "" ? 1 : parseFloat(element.style[property]);
 			}
 			return opacity;
 		},
-
-		getDocHeight: function ()
+		
+		getDocHeight: function()
 		{
 			var D = document;
 			return Math.max(
 				Math.max(D.body.scrollHeight, D.documentElement.scrollHeight),
 				Math.max(D.body.offsetHeight, D.documentElement.offsetHeight),
 				Math.max(D.body.clientHeight, D.documentElement.clientHeight));
+		}				
+					
+	};
+	
+	
+}());
+
+var site = (function ($, x)
+{
+	var self = null;
+	var home = window.location.protocol + "//" + window.location.hostname + "/";
+
+	return {
+
+		// Perform some client side initialization of your website
+		//
+		initialize: function ()
+		{
+			self = this;
+			$(window).resize(function (e) { self.setAllViewPortClasses(); });
+			document.addEventListener("touchmove", self.setAllViewPortClasses, false);
+			document.addEventListener("scroll", self.setAllViewPortClasses, false);
+
+		},
+
+
+		// Create and run some feature show
+		//
+		runFeatureShow: function ()
+		{
+		},
+
+		loadHome: function ()
+		{
+			x.defaultProcessResponse();
+			x.site.initialize();
+			x.site.runFeatureShow();
+		},
+
+		// User invoked navigation to "anchored" section located somewhere
+		// in the AJAX response view.  Move the browser's view port to that location.
+		//
+		moveToAnchorResponse: function()
+		{
+			x.defaultProcessResponse();
+
+			var hash = window.location.hash;
+			if(hash && hash.length > 1)
+			{
+				hash = hash.substr(1, hash.length);
+				window.location.hash = "";
+				window.location.hash = hash;				
+			}
+
+		},
+		
+		getView: function (href)
+		{
+			var callBack = null;
+			var body = null;
+			if (href == home)
+			{
+				callBack = this.loadHome;
+			}
+			else if (href.indexOf("/page-with-anchor") != -1)
+			{
+				callBack = this.moveToAnchorResponse;
+			}
+
+			x.sendRequest(null, 'POST', href, body, callBack);
+		},
+
+		setViewPortClass: function(element, verticalScrollPosition, inViewClass, outViewClass)
+		{
+			var top = element.offset().top;
+			var offset = Math.min($(element)[0].offsetHeight, 100);
+
+
+			if (parseInt(verticalScrollPosition) > (top + (offset/2)))
+			{
+				if(element[0].className.indexOf(outViewClass) === -1)
+				{
+					element.removeClass(inViewClass).addClass(outViewClass);
+				}
+			} 
+			else
+			{
+				if(element[0].className.indexOf(inViewClass) === -1)
+				{
+					element.addClass(inViewClass).removeClass(outViewClass);
+				}
+			}
+		},
+
+		setAllViewPortClasses: function()
+		{
+			//var watchElements = $(".scroll-watch");
+			var scrollTop = parseInt($(window).scrollTop())
+			var scrollBottom = (scrollTop  +  parseInt($(window).height()));
+/*
+			for (var i = 0; i < watchElements.length; i++)
+			{
+				self.setViewPortClass(watchElements[i], scrollBottom);
+			}
+*/
+
+			//self.setHeaderViewPortClass(scrollTop);
+		},
+		
+		setHeaderViewPortClass: function(scrollTop)
+		{
+			var header = $(".main-header");
+
+			if(scrollTop > 85
+			&& header[0].className.indexOf("header-floating"))
+			{
+				header.addClass("header-fixed").removeClass("header-floating");
+			}
+			else if(scrollTop < 86
+				 && header[0].className.indexOf("header-fixed"))
+			{
+				header.removeClass("header-fixed").addClass("header-floating");
+			}
 		}
+		
 
 	};
 
+} (jQuery, jinjup));
 
-} ());
 
+$(function ()
+{
+	jinjup.initialize();	
+
+});
 
