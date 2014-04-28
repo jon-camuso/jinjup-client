@@ -25,9 +25,13 @@ jinjup client will wire them for asynchornous calls to your http server.
 
 Use default behavior
 
+	// All requests invoked by clicks on elements having data-async attributes will
+	// be routed to jinjup's sendRequest method and from there send to the server.
+	//
 	jinjup.initialize();
 
-Override with your own code
+Optionally override default request routing by passing a request route map to 
+jinjup's initialize method.
 
 ```js
 
@@ -36,16 +40,58 @@ Override with your own code
 		// do it
 	}
 
-	var specialRoutes = {};
-	specialRoutes['/Path_To_Special_Resource'] = makeMyOwnAsynchronousCall;
+	var routesToMyCode = {};
+	routesToMyCode['/Path_To_Special_Resource'] = makeMyOwnAsynchronousCall;
 
-	jinjup.initialize(specialRoutes);
+
+	// jinjup's routRequest method will foraward requests for '/Path_To_Special_Resource'
+	// to makeMyOwnAsynchronousCall
+	//
+	jinjup.initialize(routesToMyCode);
 
 ```
 
-Perform custom preprocessing and post processing
+Override to perform some pre-request work then use jinjup to send the request.
 
-	jinjup.initialize(specialPreProcessingRoutes, specialPostProcessingRoutes);
+```js
+
+	function preProcessRequest(requestPath)
+	{
+		// prepare some name value collection to be posted to server 
+		//
+		var requestBody = 'name=value';
+
+		// call jinjup's default asynchronous request sender
+		//
+		self.sendRequest('POST', requestPath, requestBody);
+	}
+
+	var routesToMyCode = {};
+	routesToMyCode['/Path_That_Requires_Preprocessing'] = function(){preProcessRequest('/Path_That_Requires_Preprocessing');};
+
+	jinjup.initialize(routesToMyCode);
+
+```
+
+
+Perform custom response processing
+
+```js
+
+	function customProcessResponse()
+	{
+		if(confirm("Do you want jinjup to process this response?") === true)
+		{
+			jinjup.defaultProcessResponse();
+		}
+	}
+
+	var customResponseProcessingRoutes = {};
+	customResponseProcessingRoutes['/Path_Requiring_Custom_Postprcessing'] = customProcessResponse;
+
+	jinjup.initialize(null, customResponseProcessingRoutes);
+
+```
 
 
 ## Asynchronous is great but what about the BACK button and HISTORY?

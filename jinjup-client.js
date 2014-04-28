@@ -218,7 +218,7 @@ var jinjup = (function () {
 			{
 				callbackFunction = self.responseRoutes[url];
 			}
-			else if(self.requestRoutes[request.pathname])
+			else if (self.responseRoutes[request.pathname])
 			{
 				callbackFunction = self.responseRoutes[request.pathname];
 			}
@@ -532,133 +532,6 @@ var jinjup = (function () {
 	
 }());
 
-var site = (function ($, x)
-{
-	var self = null;
-	var home = window.location.protocol + "//" + window.location.hostname + "/";
 
-	return {
-
-		// Perform some client side initialization of your website
-		//
-		initialize: function ()
-		{
-			self = this;
-			$(window).resize(function (e) { self.setAllViewPortClasses(); });
-			document.addEventListener("touchmove", self.setAllViewPortClasses, false);
-			document.addEventListener("scroll", self.setAllViewPortClasses, false);
-
-		},
-
-
-		// Create and run some feature show
-		//
-		runFeatureShow: function ()
-		{
-		},
-
-		loadHome: function ()
-		{
-			x.defaultProcessResponse();
-			x.site.initialize();
-			x.site.runFeatureShow();
-		},
-
-		// User invoked navigation to "anchored" section located somewhere
-		// in the AJAX response view.  Move the browser's view port to that location.
-		//
-		moveToAnchorResponse: function()
-		{
-			x.defaultProcessResponse();
-
-			var hash = window.location.hash;
-			if(hash && hash.length > 1)
-			{
-				hash = hash.substr(1, hash.length);
-				window.location.hash = "";
-				window.location.hash = hash;				
-			}
-
-		},
-		
-		getView: function (href)
-		{
-			var callBack = null;
-			var body = null;
-			if (href == home)
-			{
-				callBack = this.loadHome;
-			}
-			else if (href.indexOf("/page-with-anchor") != -1)
-			{
-				callBack = this.moveToAnchorResponse;
-			}
-
-			x.sendRequest(null, 'POST', href, body, callBack);
-		},
-
-		setViewPortClass: function(element, verticalScrollPosition, inViewClass, outViewClass)
-		{
-			var top = element.offset().top;
-			var offset = Math.min($(element)[0].offsetHeight, 100);
-
-
-			if (parseInt(verticalScrollPosition) > (top + (offset/2)))
-			{
-				if(element[0].className.indexOf(outViewClass) === -1)
-				{
-					element.removeClass(inViewClass).addClass(outViewClass);
-				}
-			} 
-			else
-			{
-				if(element[0].className.indexOf(inViewClass) === -1)
-				{
-					element.addClass(inViewClass).removeClass(outViewClass);
-				}
-			}
-		},
-
-		setAllViewPortClasses: function()
-		{
-			//var watchElements = $(".scroll-watch");
-			var scrollTop = parseInt($(window).scrollTop())
-			var scrollBottom = (scrollTop  +  parseInt($(window).height()));
-/*
-			for (var i = 0; i < watchElements.length; i++)
-			{
-				self.setViewPortClass(watchElements[i], scrollBottom);
-			}
-*/
-
-			//self.setHeaderViewPortClass(scrollTop);
-		},
-		
-		setHeaderViewPortClass: function(scrollTop)
-		{
-			var header = $(".main-header");
-
-			if(scrollTop > 85
-			&& header[0].className.indexOf("header-floating"))
-			{
-				header.addClass("header-fixed").removeClass("header-floating");
-			}
-			else if(scrollTop < 86
-				 && header[0].className.indexOf("header-fixed"))
-			{
-				header.removeClass("header-fixed").addClass("header-floating");
-			}
-		}
-		
-
-	};
-
-} (jQuery, jinjup));
-
-
-$(function ()
-{
-	jinjup.initialize();	
-
-});
+jinjup.initialize();	
 
