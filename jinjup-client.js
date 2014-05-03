@@ -1,64 +1,65 @@
 /*
-jinjup-client v0.0.3 
+jinjup-client v0.1.0
 jinjup.com 
 Copyright (c) 2013-2014 Jon Camuso <jcamuso@exechos.com>
-Lisence MIT
+MIT Licensed
 */
 
 
-var jinjup = (function () {
-	
-	var xmlHttpReq =  window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+var jinjup = (function ()
+{
+
+	var xmlHttpReq = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
 	var self = null;
 	var requestRoutes = {};
 	var responseRoutes = {};
-	
-		urlDecode = function (encoded)
-		{
-			return decodeURIComponent((encoded+'').replace(/\+/g, '%20'));
-		};
-		
-		urlEncode = function (plaintext)
-		{
-			return encodeURIComponent(plainText);
-		};
 
-		
+	urlDecode = function (encoded)
+	{
+		return decodeURIComponent((encoded + '').replace(/\+/g, '%20'));
+	};
+
+	urlEncode = function (plaintext)
+	{
+		return encodeURIComponent(plainText);
+	};
+
+
 	return {
-	
-		initialize: function(reqRoutes, resRoutes)
+
+		initialize: function (reqRoutes, resRoutes)
 		{
-			self = this;			
+			self = this;
 			self.requestRoutes = reqRoutes ? reqRoutes : {};
 			self.responseRoutes = resRoutes ? resRoutes : {};
-			
-			if(typeof(Event) != "undefined")
+
+			if (typeof (Event) != "undefined")
 			{
-				if (!Event.prototype.preventDefault) 
+				if (!Event.prototype.preventDefault)
 				{
-					Event.prototype.preventDefault=function() 
+					Event.prototype.preventDefault = function ()
 					{
-						this.returnValue=false;
+						this.returnValue = false;
 					};
 				}
-				if (!Event.prototype.stopPropagation) 
+				if (!Event.prototype.stopPropagation)
 				{
-					Event.prototype.stopPropagation=function() 
+					Event.prototype.stopPropagation = function ()
 					{
-						this.cancelBubble=true;
+						this.cancelBubble = true;
 					};
 				}
 			}
 
-			self.initializeNavigation();			
+			self.initializeNavigation();
 		},
 
-		mergeSelect: function(target, response)
+		mergeSelect: function (target, response)
 		{
 			var options = target.options;
-			for(var index = 0; index < options.length; ++index)
+			for (var index = 0; index < options.length; ++index)
 			{
-				if((options[index].value && options[index].value == response.Content)
+				if ((options[index].value && options[index].value == response.Content)
 				|| (options[index].text == response.Content))
 				{
 					target.selectedIndex = index;
@@ -67,144 +68,166 @@ var jinjup = (function () {
 			}
 		},
 
-		createNodeFromContent: function(content)
+		createNodeFromContent: function (content)
 		{
-			var node = null;	
-			if(content.nodeType === "text")
+			var node = null;
+			if (content.nodeType === "text")
 			{
 				node = document.createTextNode(content.nodeValue);
 			}
-			else if(content.nodeType === "element")
+			else if (content.nodeType === "element")
 			{
 				node = document.createElement(content.tagName);
-				for(name in content.attributes)
+				for (name in content.attributes)
 				{
 					node.setAttribute(name, content.attributes[name]);
 				}
 				var length = content.childNodes.length;
-				for(var index = 0; index < length; ++index)
+				for (var index = 0; index < length; ++index)
 				{
 					var child = this.createNodeFromContent(content.childNodes[index]);
 					node.appendChild(child);
 				}
 			}
-			return node; 
+			return node;
 		},
 
-		mergeResponse: function(response)
+		mergeResponse: function (response)
 		{
-			var domElement;
-			var isStringContent = false;
-			var targetId = response.targetId;
-			if(targetId)
+			var matchingElements;
+			var contentIsString = false;
+			var path = response.subject.path;
+			if (path)
 			{
 				var content = response.content;
 
-				if(typeof content === "string")
+				if (typeof content === 'string')
 				{
-					isStringContent = true;
+					contentIsString = true;
 					content = urlDecode(content);
 				}
-				if(targetId === 'alert' && isStringContent)
+				if (response.subject.space === 'console')
 				{
-					alert(content);
-				}
-				if(response.targetType === 'console' && isStringContent)
-				{
-					if((console.hasOwnProperty(targetId)
-					|| targetId in console)
-					&& typeof(console[targetId]) === 'function' )
+					if ((console.hasOwnProperty(path)
+					|| path in console)
+					&& typeof (console[path]) === 'function')
 					{
-						console[targetId](content);
+						console[path](content);
 					}
 				}
-				else if((domElement = document.getElementById(targetId)) != null)
+				else if (response.subject.space === 'dom')
 				{
-					if(response.targetType == 'element')
+					if ((matchingElements = document.querySelectorAll(path)) != null)
 					{
-						if(!isStringContent)
+						var length = matchingElements.length;
+
+						if (response.subject.type === 'element')
 						{
-							var node = this.createNodeFromContent(content);
-							if(targetId === response.id)
+							for (var index = 0; index < length; ++index)
 							{
-								domElement.parentNode.replaceChild(node, domElement);
-							}
-							else
-							{
-								domElement.innerHTML = "";
-								domElement.appendChild(node);
+								var matchingElement = matchingElements[index];
+								if (!contentIsString)
+								{
+									var node = this.createNodeFromContent(content);
+
+									switch (response.method)
+									{
+										case 'post':
+											matchingElement.appendChild(node);
+											break;
+										case 'put':
+											matchingElement.parentNode.replaceChild(node, matchingElement);
+											break;
+										case 'delete':
+											matchingElement.parentNode.removeChild(matchingElement);
+											break;
+										default:
+											break;
+									};
+								}
+								else
+								{
+									if (matchingElement.tagName == "SELECT")
+									{
+										self.mergeSelect(matchingElement, response);
+									}
+									else if (response.method === 'post')
+									{
+										matchingElement.innerHTML = content;
+									}
+									else if (response.method === 'put')
+									{
+										var container = document.createElement('div');
+										container.innerHTML = content;
+										matchingElement.parentNode.replaceChild(container.firstChild, matchingElement);
+									}
+								}
 							}
 						}
-						else
+						else if (response.subject.type === 'attribute')
 						{
-							if(domElement.tagName == "INPUT")
+							for (var index = 0; index < length; ++index)
 							{
-								domElement.value = content;
-							}
-							else if(domElement.tagName == "SELECT")
-							{
-								self.mergeSelect(domElement, response);
-							}
-							else if(targetId === response.id)
-							{
-								var container = document.createElement('div');
-								container.innerHTML = content;
-								domElement.parentNode.replaceChild(container.firstChild, domElement);
-							}
-							else
-							{
-								domElement.innerHTML = content;
+								var matchingElement = matchingElements[index];
+								if (response.method === 'put')
+								{
+									matchingElement.setAttribute(response.subject.name, content);
+								}
+								else if (response.method === 'delete')
+								{
+									matchingElement.removeAttribute(response.subject.name);
+								}
 							}
 						}
 					}
-				}
-				else 
-				{
-					console.error('Dom Target: '+ targetId + ' not found.');
+					else
+					{
+						console.error('Response Subject path: ' + path + ' not found.');
+					}
 				}
 			}
 
-			if(response.childViews)
+			if (responses in response)
 			{
-				var childViews = response.childViews;
-				var count = response.childViews.length;
-			
-				for(var index = 0; index < count; index++)
+				var responses = response.responses;
+				var count = responses.length;
+
+				for (var index = 0; index < count; index++)
 				{
-					self.mergeResponse(childViews[index]);
+					self.mergeResponse(responses[index]);
 				}
 			}
-			
+
 		},
-		
+
 		defaultProcessResponse: function ()
 		{
 			try
 			{
 				var response;
 				var responseText = xmlHttpReq.responseText;
-				
-				if((response = JSON.parse(responseText)) == null)
+
+				if ((response = JSON.parse(responseText)) == null)
 				{
-					console.error('JSON failed to parse [' + responseText + ']');
+					console.error('Failed JSON.parse [' + responseText + ']');
 				}
 				else
 				{
 					self.mergeResponse(response);
 				}
 			}
-			catch(exception)
+			catch (exception)
 			{
-				console.error( ' defaultProcessResponse ' + exception);
+				console.error(' defaultProcessResponse ' + exception);
 			}
 		},
-		
-		sendRequest: function(method, url, body)
+
+		sendRequest: function (method, url, body)
 		{
 			var request = document.createElement('a');
 			request.href = url;
 			var requestPath = request.pathname;
-			if(requestPath[0] !== '/')
+			if (requestPath[0] !== '/')
 			{
 				requestPath = '/' + requestPath;
 			}
@@ -214,11 +237,11 @@ var jinjup = (function () {
 						  + request.search;
 
 			var callbackFunction = null;
-			if(self.responseRoutes[url])
+			if (self.responseRoutes[url])
 			{
 				callbackFunction = self.responseRoutes[url];
 			}
-			else if (self.responseRoutes[request.pathname])
+			else if (self.requestRoutes[request.pathname])
 			{
 				callbackFunction = self.responseRoutes[request.pathname];
 			}
@@ -226,10 +249,10 @@ var jinjup = (function () {
 			{
 				callbackFunction = self.defaultProcessResponse;
 			}
-			
+
 			xmlHttpReq.open(method, asyncUrl, true);
 			xmlHttpReq.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-		
+
 			xmlHttpReq.onreadystatechange = function ()
 			{
 				switch (xmlHttpReq.readyState)
@@ -247,7 +270,7 @@ var jinjup = (function () {
 						}
 						else
 						{
-							console.log('Error: server returned status '+ xmlHttpReq.status );
+							console.log('Error: server returned status ' + xmlHttpReq.status);
 						}
 						break;
 				}
@@ -255,132 +278,133 @@ var jinjup = (function () {
 			xmlHttpReq.send(body);
 		},
 
-		routeRequest: function(request)
+		routeRequest: function (request)
 		{
-			
-			if(request.href && self.requestRoutes[request.href])
+
+			if (request.href && self.requestRoutes[request.href])
 			{
 				self.requestRoutes[request.href]();
 			}
-			else if(self.requestRoutes[request.pathname])
+			else if (self.requestRoutes[request.pathname])
 			{
 				self.requestRoutes[request.pathname]();
 			}
 			else
 			{
 				self.sendRequest(request.getAttribute('data-async'), request.href);
-			}									
+			}
 		},
 
-		asyncNavigate: function(event)
+		asyncNavigate: function (event)
 		{
-			if(this.href)
+			if (this.href)
 			{
 				var href = this.href;
 				self.routeRequest(this);
-		
-				if(history.pushState)
+
+				if (history.pushState)
 				{
 					history.pushState('', 'New URL: ' + href, href);
 				}
 			}
-			event.preventDefault();			
+			event.preventDefault();
 		},
-		
-		initializeNavigation: function()
+
+		initializeNavigation: function ()
 		{
-			document.addEventListener('click',  function(event){
-					var element = event.target;
-					var found = false;
-					while(element 
-					&& 	!(found = (element.tagName == 'A' 
+			document.addEventListener('click', function (event)
+			{
+				var element = event.target;
+				var found = false;
+				while (element
+					&& !(found = (element.tagName == 'A'
 					&& element.getAttribute('data-async'))))
-					{
-						element = element.parentElement;
-					}
-					if(found)
-					{
-						self.asyncNavigate.call(element, event);
-					}
+				{
+					element = element.parentElement;
+				}
+				if (found)
+				{
+					self.asyncNavigate.call(element, event);
+				}
 			});
 			window.onpopstate = function (e)
 			{
-				if(!self.loaded)
+				if (!self.loaded)
 				{
 					self.loaded = true;
 				}
-				else if(history.state != null)
+				else if (history.state != null)
 				{
 					site.getView(location.href);
 				}
 			};
 		},
-		
+
 		serializeAllUserElements: function ()
 		{
 			var serializedInputs = this.serializeInputsWithIds();
-			if(serializedInputs != "")
+			if (serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			serializedInputs += this.serializeAllSelectElements();
-			if(serializedInputs != "")
+			if (serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			serializedInputs += this.serializeTextAreasWithIds();
-			if(serializedInputs != "")
+			if (serializedInputs != "")
 			{
 				serializedInputs += "&";
 			}
 			return serializedInputs;
 		},
-		
+
 		serializeTextAreasWithIds: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
 			var parentElement = (parentElement || document.body);
 			var textAreas = parentElement.getElementsByTagName('textarea');
-			for(index = 0; index < textAreas.length; index++)
+			for (index = 0; index < textAreas.length; index++)
 			{
-				if(textAreas[index].id != null && textAreas[index].id != "")
+				if (textAreas[index].id != null && textAreas[index].id != "")
 				{
 					serializedInputs += textAreas[index].id;
 					serializedInputs += "=";
-					serializedInputs += urlEncode (textAreas[index].value);
+					serializedInputs += urlEncode(textAreas[index].value);
 				}
 			}
 			return serializedInputs;
 		},
-		
+
 		serializeInputsWithIds: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
 			var inputs = this.getInputChildElements(parentElement);
-			for(index = 0; index < inputs.length; index++)
+			for (index = 0; index < inputs.length; index++)
 			{
-				if(inputs[index].id != null && inputs[index].id != "")
+				if (inputs[index].id != null && inputs[index].id != "")
 				{
-					if((inputs[index].type == "radio"
+					if ((inputs[index].type == "radio"
 						|| inputs[index].type == "checkbox")
 						&& !inputs[index].checked)
 					{
 						continue;
 					}
-					if(serializedInputs != "")
+					if (serializedInputs != "")
 					{
 						serializedInputs += "&";
 					}
 					serializedInputs += inputs[index].id;
 					serializedInputs += "=";
-					serializedInputs += urlEncode (inputs[index].value);
+					serializedInputs += urlEncode(inputs[index].value);
 				}
 			}
 			return serializedInputs;
 		},
-		
+
 		getInputChildElements: function (specifiedElement)
 		{
 			var parentElement = (specifiedElement || document.body);
@@ -388,21 +412,21 @@ var jinjup = (function () {
 			{
 				return parentElement.getElementsByTagName("input");
 			}
-			catch(exception)
+			catch (exception)
 			{
 				console.log("getInputChildElements failed with error " + exception);
 			}
 			return [];
 		},
-		
+
 		serializeAllSelectElements: function ()
 		{
 			var serializedSelects = "";
 			var selects = document.getElementsByTagName("select");
 			var index = 0;
-			for(index = 0; index < selects.length; index++)
+			for (index = 0; index < selects.length; index++)
 			{
-				if(index > 0)
+				if (index > 0)
 				{
 					serializedSelects += "&";
 				}
@@ -410,11 +434,11 @@ var jinjup = (function () {
 			}
 			return serializedSelects;
 		},
-		
+
 		serializeSelectedOptionWithId: function (specifiedElement)
 		{
 			var serializedSelect = specifiedElement.id + "=";
-			if(specifiedElement.options[specifiedElement.selectedIndex].value != "")
+			if (specifiedElement.options[specifiedElement.selectedIndex].value != "")
 			{
 				serializedSelect += urlEncode(specifiedElement.options[specifiedElement.selectedIndex].value);
 			}
@@ -424,37 +448,37 @@ var jinjup = (function () {
 			}
 			return serializedSelect;
 		},
-		
+
 		serializeAllSelectOptionsWithId: function (specifiedElement)
 		{
 			var index = 0;
 			var serializedSelect = specifiedElement.id + "=";
 			var options = specifiedElement.options;
-			for(index = 0; index < options.length; index++)
+			for (index = 0; index < options.length; index++)
 			{
-				if(index > 0)
+				if (index > 0)
 				{
 					serializedSelect += ",";
 				}
-				serializedSelect += urlEncode (options[index].value);
+				serializedSelect += urlEncode(options[index].value);
 			}
 			return serializedSelect;
 		},
-		
-		validateInputs: function(inputs)
+
+		validateInputs: function (inputs)
 		{
 			var areValid = true;
-			for(var index = 0; areValid && index < inputs.length; index++)
+			for (var index = 0; areValid && index < inputs.length; index++)
 			{
 				areValid = this.validateInput(inputs[index]);
 			}
-			return areValid ;
+			return areValid;
 		},
-		
-		validateInput: function(input)
+
+		validateInput: function (input)
 		{
 			var isValid = true;
-			if(input.value == "")
+			if (input.value == "")
 			{
 				isValid = false;
 				input.focus();
@@ -462,7 +486,7 @@ var jinjup = (function () {
 			}
 			return isValid;
 		},
-				
+
 		getProperty: function (propertyName, element)
 		{
 			// Note that in some versions of IE9 it is critical that
@@ -476,61 +500,61 @@ var jinjup = (function () {
 		        "O" + suffixed
 		    ];
 			var p;
-			while(p = properties.shift())
+			while (p = properties.shift())
 			{
-				if(typeof element.style[p] != 'undefined')
+				if (typeof element.style[p] != 'undefined')
 				{
 					return p;
 				}
 			}
 			return false;
 		},
-						
+
 		setOpacity: function (element, opacity)
 		{
 			var property = null;
-			if(opacity < 0)
+			if (opacity < 0)
 			{
 				opacity = 0;
 			}
-			if((property = element.style.filter))
+			if ((property = element.style.filter))
 			{
 				property = "alpha(opacity=" + opacity + ")";
 			}
-			else if((property = this.getProperty("opacity", element)))
+			else if ((property = this.getProperty("opacity", element)))
 			{
 				element.style[property] = opacity;
 			}
 		},
-		
+
 		getOpacity: function (element)
 		{
 			var property = null;
 			var opacity = 0;
-			if((property = element.style.filter))
+			if ((property = element.style.filter))
 			{
 				opacity = parseFloat(property.replace("alpha(opacity=", ""));
 			}
-			else if((property = this.getProperty("opacity", element)))
+			else if ((property = this.getProperty("opacity", element)))
 			{
 				opacity = element.style[property] == "" ? 1 : parseFloat(element.style[property]);
 			}
 			return opacity;
 		},
-		
-		getDocHeight: function()
+
+		getDocHeight: function ()
 		{
 			var D = document;
 			return Math.max(
 				Math.max(D.body.scrollHeight, D.documentElement.scrollHeight),
 				Math.max(D.body.offsetHeight, D.documentElement.offsetHeight),
 				Math.max(D.body.clientHeight, D.documentElement.clientHeight));
-		}				
-					
+		}
+
 	};
-	
-	
-}());
+
+
+} ());
 
 
 jinjup.initialize();	
