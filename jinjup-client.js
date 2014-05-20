@@ -30,6 +30,7 @@ var jinjup = (function ()
 		initialize: function (reqRoutes, resRoutes)
 		{
 			self = this;
+			self.loaded = true;
 			self.requestRoutes = reqRoutes ? reqRoutes : {};
 			self.responseRoutes = resRoutes ? resRoutes : {};
 
@@ -333,16 +334,19 @@ var jinjup = (function ()
 				{
 					self.loaded = true;
 				}
-				else if (history.state != null)
+				else if (history.state != null )
 				{
-					site.getView(location.href);
+					var request = document.createElement('a');
+					request.href = url;
+					request.setAttribute('data-async', 'GET');
+					self.routeRequest(request);
 				}
 			};
 		},
 
 		serializeAllUserElements: function ()
 		{
-			var serializedInputs = this.serializeInputsWithIds();
+			var serializedInputs = this.serializeInputs();
 			if (serializedInputs != "")
 			{
 				serializedInputs += "&";
@@ -352,7 +356,7 @@ var jinjup = (function ()
 			{
 				serializedInputs += "&";
 			}
-			serializedInputs += this.serializeTextAreasWithIds();
+			serializedInputs += this.serializeTextAreas();
 			if (serializedInputs != "")
 			{
 				serializedInputs += "&";
@@ -360,7 +364,7 @@ var jinjup = (function ()
 			return serializedInputs;
 		},
 
-		serializeTextAreasWithIds: function (parentElement)
+		serializeTextAreas: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
@@ -368,9 +372,9 @@ var jinjup = (function ()
 			var textAreas = parentElement.getElementsByTagName('textarea');
 			for (index = 0; index < textAreas.length; index++)
 			{
-				if (textAreas[index].id != null && textAreas[index].id != "")
+				if (textAreas[index].name != null && textAreas[index].name != "")
 				{
-					serializedInputs += textAreas[index].id;
+					serializedInputs += textAreas[index].name;
 					serializedInputs += "=";
 					serializedInputs += urlEncode(textAreas[index].value);
 				}
@@ -378,14 +382,14 @@ var jinjup = (function ()
 			return serializedInputs;
 		},
 
-		serializeInputsWithIds: function (parentElement)
+		serializeInputs: function (parentElement)
 		{
 			var index = 0;
 			var serializedInputs = "";
 			var inputs = this.getInputChildElements(parentElement);
 			for (index = 0; index < inputs.length; index++)
 			{
-				if (inputs[index].id != null && inputs[index].id != "")
+				if (inputs[index].name != null && inputs[index].name != "")
 				{
 					if ((inputs[index].type == "radio"
 						|| inputs[index].type == "checkbox")
@@ -397,7 +401,7 @@ var jinjup = (function ()
 					{
 						serializedInputs += "&";
 					}
-					serializedInputs += inputs[index].id;
+					serializedInputs += inputs[index].name;
 					serializedInputs += "=";
 					serializedInputs += urlEncode(inputs[index].value);
 				}
@@ -437,7 +441,7 @@ var jinjup = (function ()
 
 		serializeSelectedOptionWithId: function (specifiedElement)
 		{
-			var serializedSelect = specifiedElement.id + "=";
+			var serializedSelect = specifiedElement.name + "=";
 			if (specifiedElement.options[specifiedElement.selectedIndex].value != "")
 			{
 				serializedSelect += urlEncode(specifiedElement.options[specifiedElement.selectedIndex].value);
@@ -452,7 +456,7 @@ var jinjup = (function ()
 		serializeAllSelectOptionsWithId: function (specifiedElement)
 		{
 			var index = 0;
-			var serializedSelect = specifiedElement.id + "=";
+			var serializedSelect = specifiedElement.name + "=";
 			var options = specifiedElement.options;
 			for (index = 0; index < options.length; index++)
 			{
@@ -510,46 +514,6 @@ var jinjup = (function ()
 			return false;
 		},
 
-		setOpacity: function (element, opacity)
-		{
-			var property = null;
-			if (opacity < 0)
-			{
-				opacity = 0;
-			}
-			if ((property = element.style.filter))
-			{
-				property = "alpha(opacity=" + opacity + ")";
-			}
-			else if ((property = this.getProperty("opacity", element)))
-			{
-				element.style[property] = opacity;
-			}
-		},
-
-		getOpacity: function (element)
-		{
-			var property = null;
-			var opacity = 0;
-			if ((property = element.style.filter))
-			{
-				opacity = parseFloat(property.replace("alpha(opacity=", ""));
-			}
-			else if ((property = this.getProperty("opacity", element)))
-			{
-				opacity = element.style[property] == "" ? 1 : parseFloat(element.style[property]);
-			}
-			return opacity;
-		},
-
-		getDocHeight: function ()
-		{
-			var D = document;
-			return Math.max(
-				Math.max(D.body.scrollHeight, D.documentElement.scrollHeight),
-				Math.max(D.body.offsetHeight, D.documentElement.offsetHeight),
-				Math.max(D.body.clientHeight, D.documentElement.clientHeight));
-		}
 
 	};
 
