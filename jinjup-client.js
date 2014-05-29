@@ -19,9 +19,18 @@ var jinjup = (function ()
 		return decodeURIComponent((encoded + '').replace(/\+/g, '%20'));
 	};
 
-	urlEncode = function (plaintext)
+	urlEncode = function (plainText)
 	{
-		return encodeURIComponent(plainText);
+		var encoded = null;
+		try
+		{
+			encoded = encodeURIComponent(plainText);
+		}
+		catch(exception)
+		{
+			console.error(exception);
+		}
+		return encoded;
 	};
 
 
@@ -188,7 +197,7 @@ var jinjup = (function ()
 				}
 			}
 
-			if (responses in response)
+			if (response.responses)
 			{
 				var responses = response.responses;
 				var count = responses.length;
@@ -242,7 +251,7 @@ var jinjup = (function ()
 			{
 				callbackFunction = self.responseRoutes[url];
 			}
-			else if (self.requestRoutes[request.pathname])
+			else if (self.responseRoutes[request.pathname])
 			{
 				callbackFunction = self.responseRoutes[request.pathname];
 			}
@@ -279,16 +288,54 @@ var jinjup = (function ()
 			xmlHttpReq.send(body);
 		},
 
+		findRequestRoute: function(request)
+		{
+			var route = null;
+			if (request.href && (route = self.requestRoutes[request.href]))
+			{
+				return route;
+			}
+			else if ((route = self.requestRoutes[request.pathname]))
+			{
+				return route;
+			}
+			else
+			{
+				var paths = Object.keys(self.requestRoutes);
+				var wildCards = [];
+				var index = 0;
+				for(index = 0; index < paths.length; index++)
+				{
+					if(paths[index].indexOf("*") != -1)
+					{
+						wildCards.push(paths[index]);
+					}
+				}
+				for(index = 0; index < wildCards.length; index++)
+				{
+					wildCard = wildCards[index].replace("*", "");
+					if (request.href && request.href.indexOf(wildCard) === 0)
+					{
+						route = self.requestRoutes[wildCards[index]];
+						break;
+					}
+					else if(request.pathname.indexOf(wildCard) === 0)
+					{
+						route = self.requestRoutes[wildCards[index]];
+						break;
+					}
+				}
+			}
+
+			return route;
+		},
+
 		routeRequest: function (request)
 		{
-
-			if (request.href && self.requestRoutes[request.href])
+			var route = null;
+			if((route = self.findRequestRoute(request)))
 			{
-				self.requestRoutes[request.href]();
-			}
-			else if (self.requestRoutes[request.pathname])
-			{
-				self.requestRoutes[request.pathname]();
+				route(request);
 			}
 			else
 			{
@@ -303,7 +350,7 @@ var jinjup = (function ()
 				var href = this.href;
 				self.routeRequest(this);
 
-				if (history.pushState)
+				if (this.getAttribute('data-async') === 'GET' && history.pushState)
 				{
 					history.pushState('', 'New URL: ' + href, href);
 				}
