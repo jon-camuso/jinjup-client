@@ -64,6 +64,14 @@ var jinjup = (function ()
 			self.initializeNavigation();
 		},
 
+		addRequestRoute: function(path, method, routeFunction)
+		{
+			var methodFunction = {}; 
+			methodFunction[method] = routeFunction;
+			self.requestRoutes[path] = methodFunction
+			return self.requestRoutes[path];
+		},
+
 		mergeSelect: function (target, response)
 		{
 			var options = target.options;
@@ -138,15 +146,13 @@ var jinjup = (function ()
 								var matchingElement = matchingElements[index];
 								if (!contentIsString)
 								{
-									var node = this.createNodeFromContent(content);
-
 									switch (response.method)
 									{
 										case 'post':
-											matchingElement.appendChild(node);
+											matchingElement.appendChild(this.createNodeFromContent(content));
 											break;
 										case 'put':
-											matchingElement.parentNode.replaceChild(node, matchingElement);
+											matchingElement.parentNode.replaceChild(this.createNodeFromContent(content), matchingElement);
 											break;
 										case 'delete':
 											matchingElement.parentNode.removeChild(matchingElement);
@@ -291,15 +297,17 @@ var jinjup = (function ()
 		findRequestRoute: function(request)
 		{
 			var route = null;
-			if (request.href && (route = self.requestRoutes[request.href]))
+			if (((route = self.requestRoutes[request.path]) && (route = route[request.method]))
+			||  ((route = self.requestRoutes[request.pathname]) && (route = route[request.method])))
 			{
 				return route;
 			}
-			else if ((route = self.requestRoutes[request.pathname]))
+/*
+			else if ((route = self.requestRoutes[request.pathname]) && (route = route[request.method]))
 			{
 				return route;
 			}
-			else
+*/			else
 			{
 				var paths = Object.keys(self.requestRoutes);
 				var wildCards = [];
@@ -314,20 +322,27 @@ var jinjup = (function ()
 				for(index = 0; index < wildCards.length; index++)
 				{
 					wildCard = wildCards[index].replace("*", "");
-					if (request.href && request.href.indexOf(wildCard) === 0)
+					if ((request.path.indexOf(wildCard) === 0)
+					||  (request.pathname.indexOf(wildCard) === 0))
 					{
-						route = self.requestRoutes[wildCards[index]];
-						break;
+						if((route = self.requestRoutes[wildCards[index]]) && (route = route[request.method]))
+						{
+							return route;
+						}
 					}
+/*
 					else if(request.pathname.indexOf(wildCard) === 0)
 					{
-						route = self.requestRoutes[wildCards[index]];
-						break;
+						if((route = self.requestRoutes[wildCards[index]]) && (route = route[request.method]))
+						{
+							return route;
+						}
 					}
+*/
 				}
 			}
 
-			return route;
+			return null;
 		},
 
 		routeRequest: function (request)
@@ -339,22 +354,31 @@ var jinjup = (function ()
 			}
 			else
 			{
-				self.sendRequest(request.getAttribute('data-async'), request.href);
+				self.sendRequest(request.method, request.path);
 			}
 		},
 
 		asyncNavigate: function (event)
 		{
-			if (this.href)
+			var request = {method: this.getAttribute('data-async')};
+			if(this.href)
 			{
-				var href = this.href;
-				self.routeRequest(this);
-
-				if (this.getAttribute('data-async') === 'GET' && history.pushState)
-				{
-					history.pushState('', 'New URL: ' + href, href);
-				}
+				request.path = this.href;
+				request.pathname = this.pathname;
 			}
+			else if('data-path' in this)
+			{
+				request.path = this.getAttribute('data-path');
+				request.pathname = '';
+			}
+			request.event = event;
+			self.routeRequest(request);
+
+			if (request.method === 'GET' && history.pushState)
+			{
+				history.pushState('', 'New URL: ' + request.path, request.path);
+			}
+
 			event.preventDefault();
 		},
 
@@ -365,8 +389,7 @@ var jinjup = (function ()
 				var element = event.target;
 				var found = false;
 				while (element
-					&& !(found = (element.tagName == 'A'
-					&& element.getAttribute('data-async'))))
+					&& !(found = (element.getAttribute('data-async'))))
 				{
 					element = element.parentElement;
 				}
