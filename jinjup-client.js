@@ -72,6 +72,14 @@ var jinjup = (function ()
 			return self.requestRoutes[path];
 		},
 
+		addResponseRoute: function(path, method, routeFunction)
+		{
+			var methodFunction = {}; 
+			methodFunction[method] = routeFunction;
+			self.responseRoutes[path] = methodFunction
+			return self.responseRoutes[path];
+		},
+
 		mergeSelect: function (target, response)
 		{
 			var options = target.options;
@@ -182,16 +190,46 @@ var jinjup = (function ()
 						}
 						else if (response.subject.type === 'attribute')
 						{
+							var attributeName = response.subject.name;
+							var subPath = response.subject.subPath;
 							for (var index = 0; index < length; ++index)
 							{
 								var matchingElement = matchingElements[index];
-								if (response.method === 'put')
+								if (response.method === 'post')
 								{
-									matchingElement.setAttribute(response.subject.name, content);
+									var attributeValue = matchingElement.getAttribute(attributeName);
+									if(attributeName == "class")
+									{
+										attributeValue += " ";
+									}
+									attributeValue += content;
+									matchingElement.setAttribute(attributeName, attributeValue);
+								}
+								else if (response.method === 'put')
+								{
+									if(subPath)
+									{
+										var attributeValue = matchingElement.getAttribute(attributeName);
+										attributeValue = attributeValue.replace(subPath, content);
+										matchingElement.setAttribute(attributeName, attributeValue);
+									}
+									else
+									{
+										matchingElement.setAttribute(attributeName, content);
+									}
 								}
 								else if (response.method === 'delete')
 								{
-									matchingElement.removeAttribute(response.subject.name);
+									if(subPath)
+									{
+										var attributeValue = matchingElement.getAttribute(attributeName);
+										attributeValue = attributeValue.replace(subPath, "").replace("  ", "").trim();
+										matchingElement.setAttribute(attributeName, attributeValue);
+									}
+									else
+									{
+										matchingElement.removeAttribute(attributeName);
+									}
 								}
 							}
 						}
@@ -252,19 +290,8 @@ var jinjup = (function ()
 						  + requestPath
 						  + request.search;
 
-			var callbackFunction = null;
-			if (self.responseRoutes[url])
-			{
-				callbackFunction = self.responseRoutes[url];
-			}
-			else if (self.responseRoutes[request.pathname])
-			{
-				callbackFunction = self.responseRoutes[request.pathname];
-			}
-			else
-			{
-				callbackFunction = self.defaultProcessResponse;
-			}
+			request = self.createRequestFromElement(request);
+			request.method = method;
 
 			xmlHttpReq.open(method, asyncUrl, true);
 			xmlHttpReq.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -282,7 +309,15 @@ var jinjup = (function ()
 					case 4:
 						if (xmlHttpReq.status === 200)
 						{
-							callbackFunction();
+							var route = null;
+							if((route = self.findResponseRoute(request)))
+							{
+								route(request);
+							}
+							else
+							{
+								self.defaultProcessResponse();
+							}
 						}
 						else
 						{
@@ -296,20 +331,30 @@ var jinjup = (function ()
 
 		findRequestRoute: function(request)
 		{
+			return self.findRoute(request, self.requestRoutes);
+		},
+
+		findResponseRoute: function(request)
+		{
+			return self.findRoute(request, self.responseRoutes);
+		},
+
+		findRoute: function(request, routes)
+		{
 			var route = null;
-			if (((route = self.requestRoutes[request.path]) && (route = route[request.method]))
-			||  ((route = self.requestRoutes[request.pathname]) && (route = route[request.method])))
+			if (((route = routes[request.path]) && (route = route[request.method]))
+			||  ((route = routes[request.pathname]) && (route = route[request.method])))
 			{
 				return route;
 			}
 /*
-			else if ((route = self.requestRoutes[request.pathname]) && (route = route[request.method]))
+			else if ((route = routes[request.pathname]) && (route = route[request.method]))
 			{
 				return route;
 			}
 */			else
 			{
-				var paths = Object.keys(self.requestRoutes);
+				var paths = Object.keys(routes);
 				var wildCards = [];
 				var index = 0;
 				for(index = 0; index < paths.length; index++)
@@ -325,7 +370,7 @@ var jinjup = (function ()
 					if ((request.path.indexOf(wildCard) === 0)
 					||  (request.pathname.indexOf(wildCard) === 0))
 					{
-						if((route = self.requestRoutes[wildCards[index]]) && (route = route[request.method]))
+						if((route = routes[wildCards[index]]) && (route = route[request.method]))
 						{
 							return route;
 						}
@@ -358,19 +403,25 @@ var jinjup = (function ()
 			}
 		},
 
-		asyncNavigate: function (event)
+		createRequestFromElement: function(element)
 		{
-			var request = {method: this.getAttribute('data-async')};
-			if(this.href)
+			var request = {method: element.getAttribute('data-async')};
+			if(element.href)
 			{
-				request.path = this.href;
-				request.pathname = this.pathname;
+				request.path = element.href;
+				request.pathname = element.pathname;
 			}
-			else if('data-path' in this)
+			else if('data-path' in element)
 			{
-				request.path = this.getAttribute('data-path');
+				request.path = element.getAttribute('data-path');
 				request.pathname = '';
 			}
+			return request;
+		},
+
+		asyncNavigate: function (event)
+		{
+			var request = self.createRequestFromElement(this);
 			request.event = event;
 			self.routeRequest(request);
 
